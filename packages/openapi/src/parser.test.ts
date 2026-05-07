@@ -7,10 +7,8 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const SPEC = path.resolve(
-  __dirname,
-  '../../../../FuFirE/spec/openapi/openapi.json',
-)
+// Versioned spec snapshot inside this repo (synced via scripts/sync-spec.sh)
+const SPEC = path.resolve(__dirname, '../../../specs/openapi-current.json')
 
 describe('parseEndpoints', () => {
   let endpoints: EndpointMeta[]

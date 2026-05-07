@@ -2,8 +2,9 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { runInv, type InvFormat } from './commands/inv.js'
 
-const FALLBACK_SPEC =
-  '/Users/benjaminpoersch/Projects/_TOOLZ/FuFirE_smoketest/FuFirE/spec/openapi/openapi.json'
+// Versioned in-repo spec snapshot (synced via scripts/sync-spec.sh).
+// Path is resolved relative to repo root (cwd when invoked via bun run).
+const REPO_SPEC = 'specs/openapi-current.json'
 
 function parseArgs(argv: string[]): Record<string, string> {
   const out: Record<string, string> = {}
@@ -21,12 +22,11 @@ function parseArgs(argv: string[]): Record<string, string> {
 
 function resolveSpec(specArg: string | undefined): string {
   if (specArg) return path.resolve(specArg)
-  const relCandidate = path.resolve(
-    process.cwd(),
-    '../FuFirE/spec/openapi/openapi.json',
+  const repoCopy = path.resolve(process.cwd(), REPO_SPEC)
+  if (fs.existsSync(repoCopy)) return repoCopy
+  throw new Error(
+    `OpenAPI spec not found at ${repoCopy}. Run scripts/sync-spec.sh or pass --spec=<path>.`,
   )
-  if (fs.existsSync(relCandidate)) return relCandidate
-  return FALLBACK_SPEC
 }
 
 async function main(): Promise<void> {
