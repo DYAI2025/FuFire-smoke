@@ -7,3 +7,8 @@ reports/html
 .env
 .env.*
 !.env.example
+
+# sandbox/IDE scratch
+_test-dir/
+.vscode/
+.idea/
