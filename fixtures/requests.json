@@ -1,0 +1,32 @@
+{
+  "/v1/calculate/bazi": {
+    "date": "1990-06-15T14:30:00",
+    "tz": "Europe/Berlin",
+    "lon": 13.405,
+    "lat": 52.52
+  },
+  "/v1/calculate/western": {
+    "date": "1990-06-15T14:30:00",
+    "tz": "Europe/Berlin",
+    "lon": 13.405,
+    "lat": 52.52
+  },
+  "/v1/calculate/fusion": {
+    "date": "1990-06-15T14:30:00",
+    "tz": "Europe/Berlin",
+    "lon": 13.405,
+    "lat": 52.52
+  },
+  "/v1/calculate/wuxing": {
+    "date": "1990-06-15T14:30:00",
+    "tz": "Europe/Berlin",
+    "lon": 13.405,
+    "lat": 52.52
+  },
+  "/v1/calculate/tst": {
+    "date": "1990-06-15T14:30:00",
+    "tz": "Europe/Berlin",
+    "lon": 13.405,
+    "lat": 52.52
+  }
+}

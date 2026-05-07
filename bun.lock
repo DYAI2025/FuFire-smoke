@@ -5,6 +5,9 @@
     "": {
       "name": "fufire-api-testing-platform",
       "devDependencies": {
+        "@fufire-tp/core": "workspace:*",
+        "@fufire-tp/openapi": "workspace:*",
+        "@fufire-tp/runtime": "workspace:*",
         "@types/bun": "latest",
         "@types/node": "^22.0.0",
         "@typescript-eslint/eslint-plugin": "^7.0.0",

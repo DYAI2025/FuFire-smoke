@@ -1,6 +1,6 @@
 import type { EndpointMeta } from '@fufire-tp/openapi'
 import type { HttpClient } from '@fufire-tp/core'
-import { SchemaValidator, type ValidationResult } from './validator.js'
+import { SchemaValidator, type SchemaValidatorOptions, type ValidationResult } from './validator.js'
 
 export type RunResult = {
   endpoint: EndpointMeta
@@ -14,8 +14,10 @@ export type RunResult = {
 }
 
 export class Executor {
-  private validator = new SchemaValidator()
-  constructor(private http: HttpClient) {}
+  private validator: SchemaValidator
+  constructor(private http: HttpClient, validatorOpts: SchemaValidatorOptions = {}) {
+    this.validator = new SchemaValidator(validatorOpts)
+  }
 
   async runOne(args: { endpoint: EndpointMeta; payload?: unknown }): Promise<RunResult> {
     const r = await this.http.request({
