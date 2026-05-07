@@ -14,6 +14,13 @@
         "vitest": "^1.6.0",
       },
     },
+    "apps/runner": {
+      "name": "@fufire-tp/runner",
+      "version": "0.0.1",
+      "dependencies": {
+        "@fufire-tp/openapi": "workspace:*",
+      },
+    },
     "packages/openapi": {
       "name": "@fufire-tp/openapi",
       "version": "0.0.1",
@@ -92,6 +99,8 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
 
     "@fufire-tp/openapi": ["@fufire-tp/openapi@workspace:packages/openapi"],
+
+    "@fufire-tp/runner": ["@fufire-tp/runner@workspace:apps/runner"],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 

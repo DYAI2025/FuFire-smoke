@@ -1,0 +1,13 @@
+{
+  "name": "@fufire-tp/runner",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "main": "src/cli.ts",
+  "exports": {
+    ".": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@fufire-tp/openapi": "workspace:*"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "rules": [
+    { "match": "/v1/calculate/fusion", "score": "HIGH",   "reason": "central wuxing fusion logic" },
+    { "match": "/v1/calculate/bazi",   "score": "HIGH",   "reason": "core BaZi calc, lichun/zihour edges" },
+    { "match": "/v1/calculate/western","score": "HIGH",   "reason": "ephemeris-driven, timezone sensitive" },
+    { "match": "/v1/transit/narrative","score": "HIGH",   "reason": "free-text drift" },
+    { "match": "/v1/transit/",         "score": "MEDIUM", "reason": "time-dependent" },
+    { "match": "/v1/calculate/",       "score": "MEDIUM", "reason": "deterministic but numerical" },
+    { "match": "/v1/profile",          "score": "LOW",    "reason": "CRUD shape" },
+    { "match": "/v1/daily",            "score": "LOW",    "reason": "CRUD shape" },
+    { "match": "/internal/",           "score": "HIGH",   "reason": "hidden internal — auth-leak risk" }
+  ],
+  "default": "LOW"
+}
