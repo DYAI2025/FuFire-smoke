@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+.allure
+reports/html
+*.log
+.env
+.env.*
+!.env.example

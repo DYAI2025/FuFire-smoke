@@ -1,0 +1,22 @@
+{
+  "name": "fufire-api-testing-platform",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "test": "bunx vitest run",
+    "test:watch": "bunx vitest",
+    "lint": "bunx eslint .",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0"
+  }
+}
