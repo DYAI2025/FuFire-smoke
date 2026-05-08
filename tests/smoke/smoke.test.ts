@@ -76,15 +76,28 @@ export function buildMockEnv(src: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 }
 
 describe('repo-root resolution', () => {
-  it('resolveRepoRoot returns the api-testing-platform directory', () => {
+  // Tests check structure (presence of package.json with the right name +
+  // existence of the spec file), NOT path-text. The directory may be named
+  // "api-testing-platform" locally and "FuFire-smoke" on GitHub Actions
+  // (under /home/runner/work/FuFire-smoke/FuFire-smoke). Either is valid
+  // as long as the resolved path actually points at our project root.
+  it('resolveRepoRoot points at this project root (package.json present)', async () => {
     const root = resolveRepoRoot()
-    expect(root).toMatch(/api-testing-platform$/)
+    const fs = await import('node:fs')
+    const pkgPath = path.join(root, 'package.json')
+    expect(fs.existsSync(pkgPath), `expected package.json at ${pkgPath}`).toBe(true)
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { name?: string }
+    expect(pkg.name).toBe('fufire-api-testing-platform')
   })
-  it('resolveSpecPath uses repo-root, not cwd', () => {
+  it('resolveSpecPath does not depend on cwd', () => {
     const orig = process.cwd
     process.cwd = () => '/tmp'
     try {
-      expect(resolveSpecPath()).toMatch(/api-testing-platform\/specs\/openapi-current\.json$/)
+      const fromTmp = resolveSpecPath()
+      process.cwd = () => '/'
+      const fromRoot = resolveSpecPath()
+      expect(fromTmp).toBe(fromRoot)
+      expect(fromTmp.endsWith('/specs/openapi-current.json')).toBe(true)
     } finally {
       process.cwd = orig
     }
