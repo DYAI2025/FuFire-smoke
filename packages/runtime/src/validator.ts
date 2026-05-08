@@ -19,15 +19,29 @@ export type SchemaValidatorOptions = {
    * partial schemas extracted from an OpenAPI document.
    */
   rootDoc?: { components?: { schemas?: Record<string, unknown> }; definitions?: Record<string, unknown> }
+  /**
+   * Optional warning sink. Defaults to `console.warn` with a `[SchemaValidator]`
+   * prefix. Allows tests (and callers) to capture warnings raised during
+   * `addSchema` failures or other recoverable issues.
+   */
+  onWarning?: (msg: string) => void
 }
 
 export class SchemaValidator {
   private ajv: Ajv
   /** Map from component name → assigned $id used inside AJV. */
   private componentIds = new Map<string, string>()
+  /** Identity-keyed cache of compiled validator functions per schema object. */
+  private cache = new WeakMap<object, (data: unknown) => boolean | Promise<unknown>>()
+  private hits = 0
+  private misses = 0
+  private warn: (msg: string) => void
+
   constructor(opts: SchemaValidatorOptions = {}) {
     this.ajv = new Ajv({ allErrors: true, strict: false })
     addFormats(this.ajv)
+    this.warn = opts.onWarning ?? ((m) => console.warn(`[SchemaValidator] ${m}`))
+
     if (opts.rootDoc) {
       const schemas = opts.rootDoc.components?.schemas ?? opts.rootDoc.definitions ?? {}
       // First pass: assign each component a unique $id so refs can target it.
@@ -41,43 +55,61 @@ export class SchemaValidator {
         rewritten.$id = id
         try {
           this.ajv.addSchema(rewritten)
-        } catch {
-          // duplicate or unsupported — skip; ref will fail loudly during compile
+        } catch (err) {
+          this.warn(`addSchema failed for component "${name}": ${(err as Error).message}`)
         }
       }
     }
   }
 
+  /** Test/inspection hook — returns running counts of cache hits/misses. */
+  cacheStats() {
+    return { hits: this.hits, misses: this.misses }
+  }
+
   validate(schema: object, payload: unknown): ValidationResult {
-    const rewritten = this.rewriteRefs(schema)
-    let compiled
-    try {
-      compiled = this.ajv.compile(rewritten)
-    } catch (err) {
-      const e = err as Error & { missingRef?: string }
-      // Unresolvable $ref (e.g. spec has components.schemas empty). Record as a
-      // single error rather than throwing — caller decides how to interpret.
-      return {
-        valid: false,
-        errors: [
-          {
-            path: '/',
-            message: `unresolvable $ref: ${e.missingRef ?? e.message}`,
-            keyword: 'ref',
-          },
-        ],
+    let compiled = this.cache.get(schema)
+    if (compiled) {
+      this.hits++
+    } else {
+      this.misses++
+      const rewritten = this.rewriteRefs(schema)
+      try {
+        compiled = this.ajv.compile(rewritten) as (data: unknown) => boolean | Promise<unknown>
+      } catch (err) {
+        const e = err as Error & { missingRef?: string }
+        // Unresolvable $ref (e.g. spec has components.schemas empty). Record as a
+        // single error rather than throwing — caller decides how to interpret.
+        return {
+          valid: false,
+          errors: [
+            {
+              path: '/',
+              message: `unresolvable $ref: ${e.missingRef ?? e.message}`,
+              keyword: 'ref',
+            },
+          ],
+        }
       }
+      this.cache.set(schema, compiled)
     }
     const ok = compiled(payload)
     return {
       valid: Boolean(ok),
-      errors: (compiled.errors ?? []).map(this.toErr),
+      errors: ((compiled as { errors?: ErrorObject[] | null }).errors ?? []).map(this.toErr),
     }
   }
 
   /** Rewrite '#/components/schemas/X' (or '#/definitions/X') refs to registered $ids. */
   private rewriteRefs(schema: unknown): object {
-    const out = JSON.parse(JSON.stringify(schema))
+    // structuredClone handles cycles natively; fall back to JSON for environments
+    // that lack support (or types that aren't structured-cloneable).
+    let cloned: unknown
+    try {
+      cloned = structuredClone(schema)
+    } catch {
+      cloned = JSON.parse(JSON.stringify(schema))
+    }
     const walk = (node: unknown): void => {
       if (Array.isArray(node)) {
         for (const child of node) walk(child)
@@ -98,8 +130,8 @@ export class SchemaValidator {
         for (const v of Object.values(o)) walk(v)
       }
     }
-    walk(out)
-    return out as object
+    walk(cloned)
+    return cloned as object
   }
 
   private toErr = (e: ErrorObject): ValidationError => {
