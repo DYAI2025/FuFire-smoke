@@ -41,6 +41,30 @@ const SKIP_SMOKE = process.env.SKIP_SMOKE === '1'
 const PYTHON_OK = hasPython3() && hasFastapi()
 const SHOULD_RUN = !SKIP_SMOKE && PYTHON_OK
 
+export function trackMockLifecycle() {
+  let teardown = false
+  let exitCode: number | null = null
+  let exitSignal: NodeJS.Signals | null = null
+  return {
+    markTeardown() {
+      teardown = true
+    },
+    handleExit(code: number | null, signal: NodeJS.Signals | null) {
+      exitCode = code
+      exitSignal = signal
+    },
+    crashed() {
+      if (teardown) return false
+      const badExit = exitCode !== null && exitCode !== 0
+      const badSignal = exitSignal !== null && exitSignal !== 'SIGTERM'
+      return badExit || badSignal
+    },
+    summary() {
+      return `exit=${exitCode} signal=${exitSignal}`
+    },
+  }
+}
+
 export function buildMockEnv(src: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const out: NodeJS.ProcessEnv = {}
   const allow = ['PATH', 'HOME', 'LANG']
@@ -64,6 +88,21 @@ describe('repo-root resolution', () => {
     } finally {
       process.cwd = orig
     }
+  })
+})
+
+describe('mock lifecycle tracker', () => {
+  it('captures premature exit code', () => {
+    const tracker = trackMockLifecycle()
+    tracker.handleExit(137, 'SIGKILL')
+    expect(tracker.crashed()).toBe(true)
+    expect(tracker.summary()).toMatch(/137|SIGKILL/)
+  })
+  it('does not flag normal SIGTERM teardown', () => {
+    const tracker = trackMockLifecycle()
+    tracker.markTeardown()
+    tracker.handleExit(null, 'SIGTERM')
+    expect(tracker.crashed()).toBe(false)
   })
 })
 
@@ -107,6 +146,8 @@ async function waitForReady(url: string, attempts = 50, intervalMs = 300): Promi
 }
 
 describe.skipIf(!SHOULD_RUN)('smoke: FuFirE mock server', () => {
+  const lifecycle = trackMockLifecycle()
+
   beforeAll(async () => {
     // cwd = repo parent, so we can reference FuFirE/tests/mock_server.py
     const cwd = path.resolve(resolveRepoRoot(), '..')
@@ -119,10 +160,12 @@ describe.skipIf(!SHOULD_RUN)('smoke: FuFirE mock server', () => {
       // keep silent except in test failure path
       console.error('[mock spawn error]', e.message)
     })
+    mock.on('exit', (code, signal) => lifecycle.handleExit(code, signal))
     await waitForReady(`${MOCK_BASE_URL}/health`)
   })
 
   afterAll(() => {
+    lifecycle.markTeardown()
     if (mock && !mock.killed) mock.kill('SIGTERM')
   })
 
@@ -163,5 +206,7 @@ describe.skipIf(!SHOULD_RUN)('smoke: FuFirE mock server', () => {
     // Always log per-endpoint summary so the user sees mock-vs-spec drift even when test passes/fails.
     // eslint-disable-next-line no-console
     console.log('[smoke summary]', JSON.stringify(summary, null, 2))
+
+    expect(lifecycle.crashed(), `mock crashed mid-test: ${lifecycle.summary()}`).toBe(false)
   })
 })
