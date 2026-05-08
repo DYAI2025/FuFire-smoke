@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { spawn, execSync, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { loadOpenApi, parseEndpoints } from '@fufire-tp/openapi'
 import { HttpClient } from '@fufire-tp/core'
 import { Executor } from '@fufire-tp/runtime'
@@ -8,7 +9,15 @@ import fixtures from '../../fixtures/requests.json' with { type: 'json' }
 
 const MOCK_PORT = 8081
 const MOCK_BASE_URL = `http://localhost:${MOCK_PORT}`
-const SPEC_PATH = path.resolve('specs/openapi-current.json')
+
+export function resolveRepoRoot(): string {
+  // this file lives at <repo>/tests/smoke/smoke.test.ts
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+}
+
+export function resolveSpecPath(): string {
+  return path.resolve(resolveRepoRoot(), 'specs/openapi-current.json')
+}
 
 function hasPython3(): boolean {
   try {
@@ -41,6 +50,22 @@ export function buildMockEnv(src: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   }
   return out
 }
+
+describe('repo-root resolution', () => {
+  it('resolveRepoRoot returns the api-testing-platform directory', () => {
+    const root = resolveRepoRoot()
+    expect(root).toMatch(/api-testing-platform$/)
+  })
+  it('resolveSpecPath uses repo-root, not cwd', () => {
+    const orig = process.cwd
+    process.cwd = () => '/tmp'
+    try {
+      expect(resolveSpecPath()).toMatch(/api-testing-platform\/specs\/openapi-current\.json$/)
+    } finally {
+      process.cwd = orig
+    }
+  })
+})
 
 describe('buildMockEnv', () => {
   it('whitelists only PATH, HOME, LANG, MOCK_*', () => {
@@ -84,7 +109,7 @@ async function waitForReady(url: string, attempts = 50, intervalMs = 300): Promi
 describe.skipIf(!SHOULD_RUN)('smoke: FuFirE mock server', () => {
   beforeAll(async () => {
     // cwd = repo parent, so we can reference FuFirE/tests/mock_server.py
-    const cwd = path.resolve('..')
+    const cwd = path.resolve(resolveRepoRoot(), '..')
     mock = spawn('python3', ['FuFirE/tests/mock_server.py', '--port', String(MOCK_PORT)], {
       cwd,
       stdio: 'pipe',
@@ -102,7 +127,7 @@ describe.skipIf(!SHOULD_RUN)('smoke: FuFirE mock server', () => {
   })
 
   it('all calculate endpoints respond 200 with valid schema', async () => {
-    const doc = await loadOpenApi({ source: 'file', path: SPEC_PATH })
+    const doc = await loadOpenApi({ source: 'file', path: resolveSpecPath() })
     const allEndpoints = parseEndpoints(doc)
     const fixturePaths = Object.keys(fixtures)
     const targets = allEndpoints.filter(
