@@ -32,6 +32,40 @@ const SKIP_SMOKE = process.env.SKIP_SMOKE === '1'
 const PYTHON_OK = hasPython3() && hasFastapi()
 const SHOULD_RUN = !SKIP_SMOKE && PYTHON_OK
 
+export function buildMockEnv(src: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {}
+  const allow = ['PATH', 'HOME', 'LANG']
+  for (const k of allow) if (src[k] !== undefined) out[k] = src[k]
+  for (const [k, v] of Object.entries(src)) {
+    if (k.startsWith('MOCK_') && v !== undefined) out[k] = v
+  }
+  return out
+}
+
+describe('buildMockEnv', () => {
+  it('whitelists only PATH, HOME, LANG, MOCK_*', () => {
+    const src = {
+      PATH: '/usr/bin',
+      HOME: '/home/x',
+      LANG: 'C',
+      MOCK_SCENARIO: 'hilat',
+      MOCK_LATENCY_MS: '50',
+      FUFIRE_API_KEY: 'SECRET-MUST-NOT-LEAK',
+      AWS_SECRET_ACCESS_KEY: 'AKIAxxx',
+    }
+    const out = buildMockEnv(src)
+    expect(out).toEqual({
+      PATH: '/usr/bin',
+      HOME: '/home/x',
+      LANG: 'C',
+      MOCK_SCENARIO: 'hilat',
+      MOCK_LATENCY_MS: '50',
+    })
+    expect(out).not.toHaveProperty('FUFIRE_API_KEY')
+    expect(out).not.toHaveProperty('AWS_SECRET_ACCESS_KEY')
+  })
+})
+
 let mock: ChildProcess | undefined
 
 async function waitForReady(url: string, attempts = 50, intervalMs = 300): Promise<void> {
@@ -54,7 +88,7 @@ describe.skipIf(!SHOULD_RUN)('smoke: FuFirE mock server', () => {
     mock = spawn('python3', ['FuFirE/tests/mock_server.py', '--port', String(MOCK_PORT)], {
       cwd,
       stdio: 'pipe',
-      env: { ...process.env },
+      env: buildMockEnv(process.env),
     })
     mock.on('error', (e) => {
       // keep silent except in test failure path
