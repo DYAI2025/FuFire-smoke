@@ -33,4 +33,25 @@ describe('Executor.runOne', () => {
     expect(result.schemaOk).toBe(true)
     expect(result.schemaResult.errors).toEqual([])
   })
+
+  it('reports schemaOk:false when no schema declared for the returned status', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{"err":"oops"}', { status: 500, headers: { 'content-type': 'application/json' } }),
+    )
+    const ep: EndpointMeta = {
+      path: '/v1/x', method: 'POST', operationId: 'x', tags: [],
+      responseSchemas: {
+        200: { type: 'object', required: ['score'], properties: { score: { type: 'number' } } },
+      },
+      authRequired: false, deprecated: false,
+    }
+    const ex = new Executor(new HttpClient({ baseUrl: 'http://x' }))
+    const r = await ex.runOne({ endpoint: ep, payload: {} })
+    expect(r.statusOk).toBe(false)
+    // Critical: schemaOk MUST be false (or nullable), not true, when there's no schema
+    // for the actual status — otherwise reports lie.
+    expect(r.schemaOk).toBe(false)
+    expect(r.passed).toBe(false)
+    expect(r.schemaResult.errors[0]?.keyword).toBe('no-schema-for-status')
+  })
 })

@@ -28,7 +28,16 @@ export class Executor {
     const expectedSchema = args.endpoint.responseSchemas[r.status]
     const schemaResult: ValidationResult = expectedSchema
       ? this.validator.validate(expectedSchema, r.body)
-      : { valid: true, errors: [] }
+      : {
+          valid: false,
+          errors: [
+            {
+              path: '/',
+              message: `no response schema declared for status ${r.status}`,
+              keyword: 'no-schema-for-status',
+            },
+          ],
+        }
     const statusOk = r.status >= 200 && r.status < 300
     const schemaOk = schemaResult.valid
     return {
