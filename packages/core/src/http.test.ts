@@ -39,4 +39,27 @@ describe('HttpClient', () => {
     const init = fetchSpy.mock.calls[0]![1] as RequestInit
     expect(init.headers).not.toHaveProperty('X-API-Key')
   })
+
+  it('joins baseUrl + path safely (handles missing/extra slash)', async () => {
+    // mockImplementation so each call gets a fresh Response (Response.body can only be read once).
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })))
+    // baseUrl WITHOUT trailing slash, path WITH leading slash → exactly one slash
+    await new HttpClient({ baseUrl: 'http://x.test' }).request({ method: 'GET', path: '/v1/health' })
+    expect(fetchSpy.mock.calls.at(-1)![0]).toBe('http://x.test/v1/health')
+    // baseUrl WITH trailing slash + path WITH leading slash → still single slash
+    await new HttpClient({ baseUrl: 'http://x.test/' }).request({ method: 'GET', path: '/v1/health' })
+    expect(fetchSpy.mock.calls.at(-1)![0]).toBe('http://x.test/v1/health')
+    // path with query string stays intact
+    await new HttpClient({ baseUrl: 'http://x.test' }).request({ method: 'GET', path: '/v1/transit/now?limit=5' })
+    expect(fetchSpy.mock.calls.at(-1)![0]).toBe('http://x.test/v1/transit/now?limit=5')
+  })
+
+  it('null body is sent as empty (not the literal string "null")', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+    await new HttpClient({ baseUrl: 'http://x' }).request({ method: 'POST', path: '/v1/x', body: null })
+    const init = fetchSpy.mock.calls.at(-1)![1] as RequestInit
+    expect(init.body).toBeUndefined()
+  })
 })
