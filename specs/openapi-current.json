@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "FuFirE — Fusion Firmament Engine",
-    "description": "FuFirE (**Fusion Firmament Engine**) is a deterministic, astronomically precise calculation engine\nfor **BaZi (Four Pillars of Destiny)** and **Western Astrology** with **Wu-Xing fusion analysis**.",
+    "description": "FuFirE (**Fusion Firmament Engine**) is a deterministic, astronomically precise calculation engine\nfor **BaZi (Four Pillars of Destiny)** and **Western Astrology** with **Wu-Xing fusion**.\n\n## Authentication\n\n`/v1/*` business endpoints require an API key passed via the `X-API-Key` header.\n\n```\nX-API-Key: ff_pro_<your-secret>\n```\n\nKeys are **tier-based** — the key prefix encodes the tier:\n\n| Key prefix | Tier | Requests/day | Requests/min |\n|---|---|---|---|\n| `ff_free_` | free | 100 | 5 |\n| `ff_starter_` | starter | 1 000 | 20 |\n| `ff_pro_` | pro | 10 000 | 100 |\n| `ff_enterprise_` | enterprise | unlimited | unlimited |\n\nPublic endpoints (`/v1/health`, `/v1/ready`, `/v1/build`, `/v1/api`, `/v1/info/*`) require no key.\n\n## Rate Limiting\n\nTier limits are enforced per API key. Responses include:\n\n- `X-RateLimit-Limit` — requests allowed per minute for the key's tier\n- `X-RateLimit-Remaining` — remaining requests in the current window\n\nWhen the limit is exceeded the API returns **HTTP 429** with `Retry-After: 60`.\n\n## Standard Response Headers\n\nEvery response carries:\n\n- `X-Request-ID` — UUID correlation ID (client-provided value is echoed when present)\n- `X-API-Version` — engine build version\n- `X-Response-Time-ms` — server processing time in milliseconds\n\n## Error Envelope\n\nAll error responses use a consistent JSON envelope:\n\n```json\n{\n  \"error\": \"validation_error\",\n  \"message\": \"Request validation failed\",\n  \"detail\": {},\n  \"status\": 422,\n  \"path\": \"/v1/<endpoint-path>\",\n  \"timestamp\": \"<ISO-8601 timestamp>\",\n  \"request_id\": \"<UUIDv4 request id>\"\n}\n```\n",
     "contact": {
       "name": "FuFirE Support",
       "url": "https://github.com/DYAI2025/FuFirE"
@@ -9284,7 +9284,52 @@
       }
     }
   },
-  "components": {
-    "schemas": {}
-  }
+  "tags": [
+    {
+      "name": "Info",
+      "description": "Health checks, build info, and public metadata endpoints. No API key required."
+    },
+    {
+      "name": "BaZi",
+      "description": "Four Pillars of Destiny (BaZi) calculation. Returns Year/Month/Day/Hour pillars based on precise solar-term boundaries using Swiss Ephemeris."
+    },
+    {
+      "name": "Western Astrology",
+      "description": "Western planetary positions, house cusps, aspects, and angles. Supports tropical and sidereal zodiac systems with automatic house system fallback for extreme latitudes."
+    },
+    {
+      "name": "Fusion / Wu-Xing",
+      "description": "Wu-Xing (Five Elements) fusion analysis combining BaZi and Western astrology. Includes Harmony Index, elemental vectors, True Solar Time, and equation-of-time corrections."
+    },
+    {
+      "name": "Transit",
+      "description": "Real-time and historical planetary transit snapshots, timelines, state analysis, and narrative generation."
+    },
+    {
+      "name": "Experience",
+      "description": "Consumer-facing experience endpoints: daily forecasts, bootstrap payloads, and signature-delta calculations for app integrations."
+    },
+    {
+      "name": "Validation",
+      "description": "Contract-first validation against JSON Schema Draft-07 rulesets. Validates engine configurations, reference data policies, and time models."
+    },
+    {
+      "name": "Chart",
+      "description": "Chart rendering and ElevenLabs agent webhook integration."
+    },
+    {
+      "name": "Webhooks",
+      "description": "Webhook endpoints for third-party agent integrations (ElevenLabs)."
+    }
+  ],
+  "servers": [
+    {
+      "url": "https://bafe-2u0e2a.fly.dev",
+      "description": "Production (Fly.io)"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "Local development"
+    }
+  ]
 }
